@@ -1,0 +1,35 @@
+# Security & Secrets
+.env
+*.key
+*.pem
+
+# Python Virtual Environments & Cache
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Audio Cache & Outputs
+cache/
+output/
+temp/
+
+# Large Media, Archives & Test Files
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.mp3
+*.wav
+*.zip
+*.tar.gz
+*.pptx
+*.docx
+
+# Dev, Scratch & Legacy Archives
+_dev_and_testing/
+_archive_legacy_packages/
+.agents/
+.claude/
+*.log

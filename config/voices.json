@@ -1,0 +1,131 @@
+{
+  "default_model": "eleven_v4",
+  "default_sts_model": "eleven_multilingual_sts_v2",
+  "active_preset": "tata",
+  "presets": {
+    "tata": {
+      "name": "Tata Motors (tatacomp) \u2014 Video Module",
+      "type": "video",
+      "description": "Linear video module featuring Dex (Lead Narrator) and Analytica",
+      "characters": {
+        "Dex": {
+          "voice_id": "Fpi5XUKwuD84kRo0jLtj",
+          "voice_name": "Sanil",
+          "settings": {
+            "speed": 1.15,
+            "stability": 0.65,
+            "similarity_boost": 0.82,
+            "style": 0.28,
+            "use_speaker_boost": true
+          }
+        },
+        "Analytica": {
+          "voice_id": "UbB19hYD8fvYxwJAVTY5",
+          "voice_name": "Anika \u2013 Expressive & High Energy",
+          "settings": {
+            "speed": 1,
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.2,
+            "use_speaker_boost": true
+          }
+        },
+        "new analaytica": {
+          "voice_id": "UbB19hYD8fvYxwJAVTY5",
+          "voice_name": "Anika \u2013 Expressive & High Energy",
+          "settings": {
+            "speed": 1,
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.12,
+            "use_speaker_boost": true
+          }
+        }
+      }
+    },
+    "eicher": {
+      "name": "Eicher \u2014 Interactive Gamified Module",
+      "type": "interactive",
+      "description": "Gamified scenario with Customer, Service Advisor, Technician, and Narrator",
+      "characters": {
+        "Narrator": {
+          "voice_id": "DvGqn8Zp8GnW2xWcyhzt",
+          "voice_name": "Raunak M \u2013 Polite & Professional",
+          "settings": {
+            "speed": 0.9,
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.2,
+            "use_speaker_boost": true
+          }
+        },
+        "Customer": {
+          "voice_id": "bajNon13EdhNMndG3z05",
+          "voice_name": "Viraj",
+          "settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.2,
+            "speed": 0.9,
+            "use_speaker_boost": true
+          }
+        },
+        "Service Advisor": {
+          "voice_id": "Fpi5XUKwuD84kRo0jLtj",
+          "voice_name": "Sanil",
+          "settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.2,
+            "speed": 0.9,
+            "use_speaker_boost": true
+          }
+        },
+        "Technician": {
+          "voice_id": "Fpi5XUKwuD84kRo0jLtj",
+          "voice_name": "Sanil",
+          "settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.2,
+            "speed": 0.9,
+            "use_speaker_boost": true
+          }
+        },
+        "Feedback VO": {
+          "voice_id": "bajNon13EdhNMndG3z05",
+          "voice_name": "Viraj",
+          "settings": {
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.2,
+            "speed": 0.9,
+            "use_speaker_boost": true
+          }
+        },
+        "Service Advisor 2": {
+          "voice_id": "dveobG1rlBV3LOoiDZTD",
+          "voice_name": "Raunak M \u2013 Polite & Professional",
+          "settings": {
+            "speed": 0.9,
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.2,
+            "use_speaker_boost": true
+          }
+        },
+        "Driver 2": {
+          "voice_id": "mCQMfsqGDT6IDkEKR20a",
+          "voice_name": "Jeevan - Expressive Indian Voice",
+          "settings": {
+            "speed": 0.9,
+            "stability": 0.5,
+            "similarity_boost": 0.75,
+            "style": 0.2,
+            "use_speaker_boost": true
+          }
+        }
+      }
+    }
+  }
+}

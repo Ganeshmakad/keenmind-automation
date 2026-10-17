@@ -1,0 +1,35 @@
+{
+  "description": "Keenmind Audio & Video Automation Studio - Learned Pronunciation Diary",
+  "version": "1.0",
+  "global": {
+    "tatacomp": "Tata Comp",
+    "eLearning": "e-learning",
+    "VO": "voice-over",
+    "UI": "U-I",
+    "PPT": "PowerPoint",
+    "PPTX": "PowerPoint",
+    "ISO": "I-S-O",
+    "ECU": "E-C-U",
+    "RPM": "R-P-M",
+    "BHP": "B-H-P",
+    "EV": "E-V",
+    "ADAS": "A-D-A-S",
+    "CANbus": "CAN bus",
+    "CAN-bus": "CAN bus"
+  },
+  "presets": {
+    "tata": {
+      "tatacomp": "Tata Comp",
+      "Dex": "Decks",
+      "Analytica": "Ana-lit-ica",
+      "analytica": "Ana-lit-ica",
+      "Tata Motors": "Tata Motors",
+      "eLearning": "e-learning"
+    },
+    "eicher": {
+      "Advisor": "Ad-visor",
+      "Technician": "tek-nish-an",
+      "feedback VO": "feedback voice-over"
+    }
+  }
+}

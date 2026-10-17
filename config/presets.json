@@ -1,0 +1,105 @@
+{
+  "active_preset": "tata",
+  "presets": {
+    "tata": {
+      "id": "tata",
+      "name": "Tata Motors — Linear Video Module",
+      "description": "Linear video eLearning with comic dialogue bubbles & narrative slides (Analytica & Dex)",
+      "parser_mode": "comic_and_notes",
+      "characters": {
+        "Analytica": {
+          "voice_id": "jUjRbhZWoMK4aDciW36V",
+          "voice_name": "Anika",
+          "gender": "female",
+          "settings": {
+            "stability": 0.50,
+            "similarity_boost": 0.75,
+            "style": 0.20,
+            "speed": 0.90,
+            "use_speaker_boost": true
+          }
+        },
+        "Dex": {
+          "voice_id": "Fpi5XUKwuD84kRo0jLtj",
+          "voice_name": "Sanil",
+          "gender": "male",
+          "settings": {
+            "stability": 0.50,
+            "similarity_boost": 0.75,
+            "style": 0.20,
+            "speed": 0.90,
+            "use_speaker_boost": true
+          }
+        },
+        "Narrator": {
+          "voice_id": "bajNon13EdhNMndG3z05",
+          "voice_name": "Viraj",
+          "gender": "male",
+          "settings": {
+            "stability": 0.50,
+            "similarity_boost": 0.75,
+            "style": 0.20,
+            "speed": 0.90,
+            "use_speaker_boost": true
+          }
+        }
+      }
+    },
+    "eicher": {
+      "id": "eicher",
+      "name": "Eicher — Interactive Gamified Module",
+      "description": "Gamified module with discrete roles (Customer, Advisor, Technician, Feedback)",
+      "parser_mode": "game_roles",
+      "characters": {
+        "Narrator": {
+          "voice_id": "bajNon13EdhNMndG3z05",
+          "voice_name": "Viraj",
+          "gender": "male",
+          "settings": {
+            "stability": 0.50,
+            "similarity_boost": 0.75,
+            "style": 0.20,
+            "speed": 0.90,
+            "use_speaker_boost": true
+          }
+        },
+        "Customer": {
+          "voice_id": "bajNon13EdhNMndG3z05",
+          "voice_name": "Viraj",
+          "gender": "male",
+          "settings": {
+            "stability": 0.50,
+            "similarity_boost": 0.75,
+            "style": 0.20,
+            "speed": 0.90,
+            "use_speaker_boost": true
+          }
+        },
+        "Service Advisor": {
+          "voice_id": "Fpi5XUKwuD84kRo0jLtj",
+          "voice_name": "Sanil",
+          "gender": "male",
+          "settings": {
+            "stability": 0.50,
+            "similarity_boost": 0.75,
+            "style": 0.20,
+            "speed": 0.90,
+            "use_speaker_boost": true
+          }
+        },
+        "Technician": {
+          "voice_id": "Fpi5XUKwuD84kRo0jLtj",
+          "voice_name": "Sanil",
+          "gender": "male",
+          "settings": {
+            "stability": 0.50,
+            "similarity_boost": 0.75,
+            "style": 0.20,
+            "speed": 0.90,
+            "use_speaker_boost": true
+          }
+        }
+      }
+    }
+  }
+}
