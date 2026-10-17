@@ -29,6 +29,7 @@ EXPLICIT_ROOT_FILES = [
     "run_server.py",
     "cli.py",
     "test_team_env.py",
+    "version.json",
     "TEAM_SETUP_GUIDE.md",
     "README.md"
 ]
@@ -37,6 +38,7 @@ CORE_DIRS = [
     "config",
     "core",
     "api",
+    "scripts",
     "tests",
     "cache"
 ]
