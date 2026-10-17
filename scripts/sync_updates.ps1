@@ -107,8 +107,15 @@ try {
         if ($protectedNames -contains $item.Name.ToLower()) {
             continue
         }
-        $destTarget = "$RootDir\$($item.Name)"
-        Copy-Item -Path $item.FullName -Destination $destTarget -Recurse -Force
+        if ($item.PSIsContainer) {
+            $destTarget = "$RootDir\$($item.Name)"
+            if (-not (Test-Path $destTarget)) {
+                New-Item -ItemType Directory -Path $destTarget -Force | Out-Null
+            }
+            Copy-Item -Path "$($item.FullName)\*" -Destination $destTarget -Recurse -Force
+        } else {
+            Copy-Item -Path $item.FullName -Destination "$RootDir\$($item.Name)" -Force
+        }
     }
 
     # Re-install requirements if updated
