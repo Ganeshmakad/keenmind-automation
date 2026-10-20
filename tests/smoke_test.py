@@ -347,6 +347,17 @@ class TestKeenmindAutomationStudio(unittest.TestCase):
         self.assertGreater(data["cache_files_count"], 500)
         self.assertGreater(data["pronunciation_rules_count"], 10)
 
+    def test_20_preview_character_voice(self):
+        resp = self.client.post("/api/preview-character-voice", json={
+            "preset_id": "tata",
+            "character": "Dex",
+            "dialogue": "Tatacomp test"
+        })
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertIn("status", data)
+        self.assertIn(data["status"], ["success", "dry_run"])
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

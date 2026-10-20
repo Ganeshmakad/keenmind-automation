@@ -29,17 +29,6 @@
             "style": 0.2,
             "use_speaker_boost": true
           }
-        },
-        "new analaytica": {
-          "voice_id": "UbB19hYD8fvYxwJAVTY5",
-          "voice_name": "Anika \u2013 Expressive & High Energy",
-          "settings": {
-            "speed": 1,
-            "stability": 0.5,
-            "similarity_boost": 0.75,
-            "style": 0.12,
-            "use_speaker_boost": true
-          }
         }
       }
     },

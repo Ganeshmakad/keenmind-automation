@@ -1201,12 +1201,16 @@
             <span style="font-size: 0.92rem; color: var(--text-muted);">In-line editable scripts. Audition individual lines or select all for batch rendering.</span>
           </div>
           <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;">
+            <button type="button" class="btn btn-secondary" onclick="openPronunciationModal()" title="Open Pronunciation Dictionary to define phonetic respellings">
+              📖 Pronunciation Dictionary
+            </button>
             <button type="button" class="btn btn-secondary" onclick="removeStoryboardFile()" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.08); font-weight: 700;" title="Remove loaded storyboard and clear all extracted voiceover lines">
               ✕ Remove Storyboard
             </button>
             <button class="btn btn-secondary" onclick="exportCSV()">Download CSV</button>
             <button class="btn btn-secondary" onclick="generateBatch(true)">Dry-Run Test (0 Credits)</button>
-            <button class="btn btn-success" onclick="generateBatch(false)">⚡ Generate Real Audio</button>
+            <button class="btn btn-success" onclick="generateBatch(false, false)" title="Synthesizes batch audio with ElevenLabs (reuses cached takes to save credits)">⚡ Generate Real Audio</button>
+            <button class="btn btn-warning" onclick="generateBatch(false, true)" title="Forces fresh ElevenLabs synthesis for all selected lines, bypassing local cache to fix mispronunciations or voice glitches">🔥 Force Re-generate Real Audio</button>
           </div>
         </div>
 
@@ -1824,12 +1828,15 @@
         <!-- Add New Rule -->
         <div style="background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 1.25rem;">
           <strong style="display: block; margin-bottom: 0.5rem; font-size: 0.92rem; color: var(--card-heading);">+ Add Word Substitution:</strong>
-          <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.75rem; align-items: center;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 0.75rem; align-items: center;">
             <input type="text" id="newPronunWord" class="text-input" placeholder="Original Term (e.g. tatacomp)">
             <input type="text" id="newPronunRepl" class="text-input" placeholder="Spoken Phonetic (e.g. Tata Comp)">
-            <button class="btn btn-primary" onclick="addPronunciationRuleFromUI()">Add Rule</button>
+            <button type="button" class="btn btn-secondary" id="btnTestNewPronun" onclick="testNewPronunAudio(this)" title="Audition how this phonetic spelling sounds before adding to dictionary">🔊 Test Audio</button>
+            <button type="button" class="btn btn-primary" onclick="addPronunciationRuleFromUI()">Add Rule</button>
           </div>
+          <div id="newPronunAudioStatus" style="display: none; font-size: 0.82rem; margin-top: 0.45rem; font-weight: 600;"></div>
         </div>
+        <audio id="pronunciationAudioPlayer" preload="auto" style="display: none;"></audio>
 
         <!-- Rules List Table -->
         <div style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 14px;">
@@ -3192,10 +3199,22 @@
       }
     }
 
-    async function generateBatch(dryRun) {
+    async function generateBatch(dryRun, forceRegenerate = false) {
       const status = document.getElementById('statusMessage');
       const approvedItems = currentItems.filter(i => i.approved);
-      status.innerText = dryRun ? "Running dry-run validation..." : "Generating approved batch via ElevenLabs...";
+      if (approvedItems.length === 0) {
+        alert('No lines selected! Please check at least one line to generate audio.');
+        return;
+      }
+
+      if (forceRegenerate && !dryRun) {
+        const ok = confirm(`🔥 Force Re-generate ${approvedItems.length} lines fresh from ElevenLabs?\n\nThis will bypass the local cache and re-synthesize every selected line with fresh audio takes.`);
+        if (!ok) return;
+      }
+
+      status.innerText = dryRun 
+        ? "Running dry-run validation..." 
+        : (forceRegenerate ? `🔥 Force re-generating fresh batch (${approvedItems.length} lines) via ElevenLabs (bypassing cache)...` : `Generating approved batch (${approvedItems.length} lines) via ElevenLabs...`);
 
       try {
         const res = await fetch('/api/generate-audio', {
@@ -3205,14 +3224,14 @@
             items: approvedItems,
             preset: activePresetId,
             dry_run: dryRun,
-            overwrite: false
+            overwrite: !!forceRegenerate
           })
         });
         const data = await res.json();
         if (!data.dry_run && data.download_url) {
           status.innerHTML = `
             <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; margin-top: 0.35rem;">
-              <span style="color: #10b981; font-weight: 700;">✓ Generated ${data.processed_count} audio files!</span>
+              <span style="color: #10b981; font-weight: 700;">✓ ${forceRegenerate ? 'Force Re-generated' : 'Generated'} ${data.processed_count} audio files!</span>
               <a href="${data.download_url}" download class="btn btn-success" style="font-size: 0.85rem; padding: 0.45rem 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.45rem;">
                 📦 Download Audio Package (ZIP)
               </a>
@@ -5835,13 +5854,13 @@
               <td style="padding: 0.65rem 1rem; color: var(--primary); font-family: monospace;">${r}</td>
               <td style="padding: 0.65rem 1rem;"><span style="font-size:0.75rem; background:var(--surface-subtle); padding:2px 8px; border-radius:9999px;">Global</span></td>
               <td style="padding: 0.65rem 1rem; text-align: right;">
-                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.78rem;" onclick="testPronounceWord('${r.replace(/'/g, "\\'")}')">🔊 Listen</button>
-                <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.78rem; margin-left: 4px;" onclick="deletePronunciationRuleFromUI('${w.replace(/'/g, "\\'")}')">🗑️</button>
+                <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 0.78rem;" onclick="testPronounceWord('${r.replace(/'/g, "\\'")}', this)">🔊 Test Audio</button>
+                <button class="btn btn-danger" style="padding: 3px 8px; font-size: 0.78rem; margin-left: 4px;" onclick="deletePronunciationRuleFromUI('${w.replace(/'/g, "\\'")}')">🗑️</button>
               </td>
             </tr>`;
         }
 
-        const activePreset = (typeof currentPreset !== 'undefined' && currentPreset) ? currentPreset : 'tata';
+        const activePreset = (typeof activePresetId !== 'undefined' && activePresetId) ? activePresetId : 'tata';
         const presets = data.presets || {};
         const pr = presets[activePreset] || {};
         for (const [w, r] of Object.entries(pr)) {
@@ -5851,8 +5870,8 @@
               <td style="padding: 0.65rem 1rem; color: #0284c7; font-family: monospace;">${r}</td>
               <td style="padding: 0.65rem 1rem;"><span style="font-size:0.75rem; background:rgba(2,132,199,0.15); color:#0284c7; padding:2px 8px; border-radius:9999px;">${activePreset}</span></td>
               <td style="padding: 0.65rem 1rem; text-align: right;">
-                <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.78rem;" onclick="testPronounceWord('${r.replace(/'/g, "\\'")}')">🔊 Listen</button>
-                <button class="btn btn-danger" style="padding: 2px 8px; font-size: 0.78rem; margin-left: 4px;" onclick="deletePronunciationRuleFromUI('${w.replace(/'/g, "\\'")}', '${activePreset}')">🗑️</button>
+                <button class="btn btn-secondary" style="padding: 3px 9px; font-size: 0.78rem;" onclick="testPronounceWord('${r.replace(/'/g, "\\'")}', this)">🔊 Test Audio</button>
+                <button class="btn btn-danger" style="padding: 3px 8px; font-size: 0.78rem; margin-left: 4px;" onclick="deletePronunciationRuleFromUI('${w.replace(/'/g, "\\'")}', '${activePreset}')">🗑️</button>
               </td>
             </tr>`;
         }
@@ -5871,7 +5890,7 @@
         return;
       }
       try {
-        const activePreset = (typeof currentPreset !== 'undefined' && currentPreset) ? currentPreset : 'tata';
+        const activePreset = (typeof activePresetId !== 'undefined' && activePresetId) ? activePresetId : 'tata';
         const res = await fetch('/api/pronunciation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -5880,6 +5899,8 @@
         if (res.ok) {
           wInput.value = '';
           rInput.value = '';
+          const st = document.getElementById('newPronunAudioStatus');
+          if (st) st.style.display = 'none';
           await loadPronunciationRules();
         }
       } catch (e) {
@@ -5901,26 +5922,123 @@
       }
     }
 
-    async function testPronounceWord(word) {
+    function testNewPronunAudio(btnElem) {
+      const wInput = document.getElementById('newPronunWord');
+      const rInput = document.getElementById('newPronunRepl');
+      const repl = rInput ? rInput.value.trim() : '';
+      const word = wInput ? wInput.value.trim() : '';
+      const toTest = repl || word;
+      if (!toTest) {
+        alert('Please enter the spoken phonetic replacement (or original word) in the box to test audio.');
+        return;
+      }
+      const st = document.getElementById('newPronunAudioStatus');
+      testPronounceWord(toTest, btnElem, st);
+    }
+
+    async function testPronounceWord(word, btnElem = null, statusElem = null) {
+      const origText = btnElem ? btnElem.innerText : '🔊 Test Audio';
+      if (btnElem) {
+        btnElem.disabled = true;
+        btnElem.innerText = '⏳ Synthesizing...';
+      }
+      if (statusElem) {
+        statusElem.style.display = 'block';
+        statusElem.innerHTML = '<span style="color: var(--accent);">⏳ Synthesizing phonetic pronunciation...</span>';
+      }
+
       try {
-        const activePreset = (typeof currentPreset !== 'undefined' && currentPreset) ? currentPreset : 'tata';
+        const activePreset = (typeof activePresetId !== 'undefined' && activePresetId) ? activePresetId : 'tata';
+        const chars = Object.keys(allPresets[activePreset]?.characters || {});
+        const charName = chars.length ? chars[0] : 'Dex';
+
         const res = await fetch('/api/preview-character-voice', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             preset_id: activePreset,
-            character: 'Dex',
+            character: charName,
             dialogue: word
           })
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.audio_url) {
-            new Audio(data.audio_url).play();
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `Server returned ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (data.status === 'dry_run') {
+          if (statusElem) {
+            statusElem.innerHTML = `<span style="color: #fbbf24;">⚠️ Simulated Dry-Run: ${data.note || 'No API key in .env'}</span>`;
+          } else {
+            alert(`⚠️ Simulated Dry-Run:\n${data.note || 'ElevenLabs API key is not configured in .env'}`);
           }
+          if (btnElem) {
+            btnElem.disabled = false;
+            btnElem.innerText = origText;
+          }
+          return;
+        }
+
+        if (data.audio_url) {
+          if (btnElem) btnElem.innerText = '🔊 Playing...';
+          if (statusElem) {
+            statusElem.innerHTML = `<span style="color: #10b981;">🔊 Playing "${word}" using [${charName}]...</span>`;
+          }
+
+          let player = document.getElementById('pronunciationAudioPlayer');
+          if (!player) {
+            player = document.createElement('audio');
+            player.id = 'pronunciationAudioPlayer';
+            player.style.display = 'none';
+            document.body.appendChild(player);
+          }
+
+          player.src = data.audio_url + '?t=' + Date.now();
+          player.onended = () => {
+            if (btnElem) {
+              btnElem.disabled = false;
+              btnElem.innerText = origText;
+            }
+            if (statusElem) {
+              statusElem.innerHTML = '<span style="color: #10b981;">✓ Audio playback finished.</span>';
+            }
+          };
+          player.onerror = () => {
+            if (btnElem) {
+              btnElem.disabled = false;
+              btnElem.innerText = origText;
+            }
+            if (statusElem) {
+              statusElem.innerHTML = '<span style="color: #ef4444;">Playback error</span>';
+            }
+          };
+
+          const playPromise = player.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(err => {
+              console.warn('Autoplay prevented or interrupted:', err);
+              if (btnElem) {
+                btnElem.disabled = false;
+                btnElem.innerText = origText;
+              }
+            });
+          }
+        } else {
+          throw new Error('No audio URL returned by server.');
         }
       } catch (e) {
         console.error('Test pronunciation audio failed:', e);
+        if (statusElem) {
+          statusElem.innerHTML = `<span style="color: #ef4444;">❌ Test failed: ${e.message}</span>`;
+        } else {
+          alert('Test Pronunciation Error: ' + e.message);
+        }
+        if (btnElem) {
+          btnElem.disabled = false;
+          btnElem.innerText = origText;
+        }
       }
     }
   </script>

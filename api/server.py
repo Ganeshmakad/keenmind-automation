@@ -74,6 +74,16 @@ class AutoTagRequest(BaseModel):
     text: Optional[str] = None
     segments: Optional[List[Dict[str, Any]]] = None
 
+class PreviewVoiceRequest(BaseModel):
+    preset_id: Optional[str] = None
+    preset: Optional[str] = None
+    character: Optional[str] = None
+    speaker: Optional[str] = None
+    dialogue: Optional[str] = None
+    text: Optional[str] = None
+    voice_id: Optional[str] = None
+    model_id: Optional[str] = None
+
 STATIC_DIR = Path(__file__).parent / "static"
 
 @app.get("/", response_class=FileResponse)
@@ -352,6 +362,53 @@ def api_audition_line(req: AuditionRequest):
                 "model_id": req.model_id,
                 "settings_applied": req.settings
             }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/preview-character-voice")
+def api_preview_character_voice(req: PreviewVoiceRequest):
+    """Previews / tests audio pronunciation for a word or phrase with a character voice."""
+    preset_id = req.preset_id or req.preset or "tata"
+    character = req.character or req.speaker or "Dex"
+    spoken_text = (req.dialogue or req.text or "").strip()
+    if not spoken_text:
+        raise HTTPException(status_code=400, detail="Text or dialogue is required.")
+
+    temp_dir = Path("temp/auditions")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    m_tag = req.model_id or "eleven_v4"
+    t_hash = hashlib.md5(spoken_text.encode()).hexdigest()[:8]
+    c_hash = hashlib.md5(f"{preset_id}_{character}_{m_tag}".encode()).hexdigest()[:6]
+    out_file = temp_dir / f"pronounce_{character}_{c_hash}_{t_hash}.mp3"
+
+    active_key = voice_engine.get_api_key(force_reload=True)
+    if not active_key:
+        return {
+            "status": "dry_run",
+            "character": character,
+            "text": spoken_text,
+            "note": "API key not set in .env — simulated dry run preview."
+        }
+
+    try:
+        res = voice_engine.generate_tts(
+            text=spoken_text,
+            character=character,
+            output_path=str(out_file),
+            preset=preset_id,
+            voice_id_override=req.voice_id,
+            model_id_override=req.model_id,
+            dry_run=False,
+            overwrite=True
+        )
+        return {
+            "status": "success",
+            "audio_url": f"/api/audio/auditions/{out_file.name}",
+            "character": character,
+            "preset": preset_id,
+            "text": spoken_text
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
