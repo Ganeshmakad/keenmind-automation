@@ -337,6 +337,20 @@ class TestKeenmindAutomationStudio(unittest.TestCase):
         spoken_reverted = self.voice_engine.apply_pronunciation_rules("Check the TelematicModule status", preset="tata")
         self.assertIn("TelematicModule", spoken_reverted)
 
+        # 3. Test API bulk addition
+        bulk_resp = self.client.post("/api/pronunciation/bulk", json={
+            "rules": [
+                {"word": "BulkWordA", "replacement": "Bulk Word Ay"},
+                {"word": "BulkWordB", "replacement": "Bulk Word Bee"}
+            ],
+            "preset": "tata"
+        })
+        self.assertEqual(bulk_resp.status_code, 200)
+        self.assertEqual(bulk_resp.json()["added_count"], 2)
+        # Cleanup
+        self.voice_engine.delete_pronunciation_rule("BulkWordA", preset="tata")
+        self.voice_engine.delete_pronunciation_rule("BulkWordB", preset="tata")
+
     def test_19_api_status_hardware_metrics(self):
         resp = self.client.get("/api/status")
         self.assertEqual(resp.status_code, 200)

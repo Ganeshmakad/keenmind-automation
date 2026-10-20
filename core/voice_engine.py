@@ -67,6 +67,27 @@ class VoiceEngine:
         self.save_pronunciation_dictionary(data)
         return data
 
+    def add_pronunciation_rules_bulk(self, rules: List[Dict[str, str]], preset: Optional[str] = None) -> Dict[str, Any]:
+        """Adds or updates multiple pronunciation rules in a single atomic disk operation."""
+        data = self._load_pronunciation_dict()
+        for item in rules:
+            w = str(item.get("word", "")).strip()
+            r = str(item.get("replacement", "")).strip()
+            if not w or not r:
+                continue
+            if preset:
+                if "presets" not in data:
+                    data["presets"] = {}
+                if preset not in data["presets"]:
+                    data["presets"][preset] = {}
+                data["presets"][preset][w] = r
+            else:
+                if "global" not in data:
+                    data["global"] = {}
+                data["global"][w] = r
+        self.save_pronunciation_dictionary(data)
+        return data
+
     def delete_pronunciation_rule(self, word: str, preset: Optional[str] = None) -> Dict[str, Any]:
         """Deletes a pronunciation rule."""
         data = self._load_pronunciation_dict()

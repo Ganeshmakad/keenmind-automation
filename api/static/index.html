@@ -1825,8 +1825,14 @@
           Define phonetic respellings for client terminology, acronyms, and names. The engine automatically applies these rules during synthesis so pronunciations remain consistent across the entire team.
         </p>
 
-        <!-- Add New Rule -->
-        <div style="background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 1.25rem;">
+        <!-- Tabs / Toggle for Single vs Bulk Add -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.85rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+          <button type="button" id="tabPronunSingle" class="btn btn-primary" style="padding: 0.35rem 0.85rem; font-size: 0.85rem;" onclick="switchPronunAddTab('single')">+ Single Word</button>
+          <button type="button" id="tabPronunBulk" class="btn btn-secondary" style="padding: 0.35rem 0.85rem; font-size: 0.85rem;" onclick="switchPronunAddTab('bulk')">📋 Bulk Add Words (Paste List)</button>
+        </div>
+
+        <!-- Add Single Rule -->
+        <div id="pronunSingleSection" style="background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 1.25rem;">
           <strong style="display: block; margin-bottom: 0.5rem; font-size: 0.92rem; color: var(--card-heading);">+ Add Word Substitution:</strong>
           <div style="display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 0.75rem; align-items: center;">
             <input type="text" id="newPronunWord" class="text-input" placeholder="Original Term (e.g. tatacomp)">
@@ -1835,6 +1841,28 @@
             <button type="button" class="btn btn-primary" onclick="addPronunciationRuleFromUI()">Add Rule</button>
           </div>
           <div id="newPronunAudioStatus" style="display: none; font-size: 0.82rem; margin-top: 0.45rem; font-weight: 600;"></div>
+        </div>
+
+        <!-- Bulk Add Rules Section -->
+        <div id="pronunBulkSection" style="display: none; background: var(--surface-subtle); border: 1px solid var(--border); border-radius: 16px; padding: 1rem; margin-bottom: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong style="font-size: 0.92rem; color: var(--card-heading);">📋 Bulk Add Word Substitutions:</strong>
+            <span style="font-size: 0.78rem; color: var(--text-muted);">Format: <code>Word, Phonetic</code> or <code>Word -&gt; Phonetic</code> (one per line)</span>
+          </div>
+          <textarea id="bulkPronunText" class="text-input" rows="4" style="width: 100%; font-family: monospace; font-size: 0.85rem; padding: 0.6rem; resize: vertical;" placeholder="tatacomp, Tata Comp&#10;ECU, E-C-U&#10;CAN -&gt; C-A-N&#10;telematics, tele-matics"></textarea>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.65rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600;">Scope:</span>
+              <select id="bulkPronunScope" class="select-input" style="padding: 0.3rem 0.65rem; font-size: 0.82rem;">
+                <option value="preset" selected>Active Client Preset</option>
+                <option value="global">Global (All Presets)</option>
+              </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span id="bulkPronunStatus" style="font-size: 0.82rem; font-weight: 600;"></span>
+              <button type="button" class="btn btn-primary" onclick="submitBulkPronunciationFromUI()" style="padding: 0.4rem 1rem; font-size: 0.88rem;">⚡ Import All Words</button>
+            </div>
+          </div>
         </div>
         <audio id="pronunciationAudioPlayer" preload="auto" style="display: none;"></audio>
 
@@ -5919,6 +5947,104 @@
         await loadPronunciationRules();
       } catch (e) {
         alert('Error deleting rule: ' + e);
+      }
+    }
+
+    function switchPronunAddTab(mode) {
+      const btnSingle = document.getElementById('tabPronunSingle');
+      const btnBulk = document.getElementById('tabPronunBulk');
+      const secSingle = document.getElementById('pronunSingleSection');
+      const secBulk = document.getElementById('pronunBulkSection');
+      if (mode === 'bulk') {
+        if (btnSingle) { btnSingle.className = 'btn btn-secondary'; }
+        if (btnBulk) { btnBulk.className = 'btn btn-primary'; }
+        if (secSingle) secSingle.style.display = 'none';
+        if (secBulk) secBulk.style.display = 'block';
+      } else {
+        if (btnSingle) { btnSingle.className = 'btn btn-primary'; }
+        if (btnBulk) { btnBulk.className = 'btn btn-secondary'; }
+        if (secSingle) secSingle.style.display = 'block';
+        if (secBulk) secBulk.style.display = 'none';
+      }
+    }
+
+    async function submitBulkPronunciationFromUI() {
+      const textarea = document.getElementById('bulkPronunText');
+      const status = document.getElementById('bulkPronunStatus');
+      const scopeSelect = document.getElementById('bulkPronunScope');
+      const rawText = textarea ? textarea.value : '';
+      if (!rawText.trim()) {
+        alert('Please paste at least one line with: Word, Phonetic Replacement');
+        return;
+      }
+
+      const lines = rawText.split('\n');
+      const rules = [];
+      for (let l of lines) {
+        l = l.trim();
+        if (!l || l.startsWith('#') || l.startsWith('//')) continue;
+        let parts = [];
+        if (l.includes('->')) {
+          parts = l.split('->');
+        } else if (l.includes('=')) {
+          parts = l.split('=');
+        } else if (l.includes('\t')) {
+          parts = l.split('\t');
+        } else if (l.includes(',')) {
+          parts = l.split(',');
+        } else if (l.includes(':')) {
+          parts = l.split(':');
+        }
+
+        if (parts.length >= 2) {
+          const w = parts[0].trim();
+          const r = parts.slice(1).join(',').trim();
+          if (w && r) {
+            rules.push({ word: w, replacement: r });
+          }
+        }
+      }
+
+      if (rules.length === 0) {
+        alert('Could not parse any rules. Please format each line as:\nOriginal Word, Spoken Phonetic\n(e.g. ECU, E-C-U)');
+        return;
+      }
+
+      const scope = scopeSelect ? scopeSelect.value : 'preset';
+      const activePreset = (scope === 'preset') 
+        ? ((typeof activePresetId !== 'undefined' && activePresetId) ? activePresetId : 'tata')
+        : null;
+
+      if (status) {
+        status.innerHTML = `<span style="color: var(--accent);">Importing ${rules.length} rules...</span>`;
+      }
+
+      try {
+        const res = await fetch('/api/pronunciation/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rules: rules, preset: activePreset })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (status) {
+            status.innerHTML = `<span style="color: #10b981;">✓ Added ${data.added_count} rules!</span>`;
+          }
+          if (textarea) textarea.value = '';
+          await loadPronunciationRules();
+          setTimeout(() => {
+            if (status) status.innerHTML = '';
+          }, 3500);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || `Server error: ${res.status}`);
+        }
+      } catch (e) {
+        if (status) {
+          status.innerHTML = `<span style="color: #ef4444;">❌ ${e.message}</span>`;
+        } else {
+          alert('Bulk Import Error: ' + e.message);
+        }
       }
     }
 

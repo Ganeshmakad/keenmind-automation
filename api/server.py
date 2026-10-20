@@ -143,6 +143,10 @@ class PronunciationDeleteRequest(BaseModel):
     word: str
     preset: Optional[str] = None
 
+class PronunciationBulkRequest(BaseModel):
+    rules: List[Dict[str, str]]
+    preset: Optional[str] = None
+
 @app.get("/api/pronunciation")
 def get_pronunciation_rules():
     """Returns the loaded Pronunciation Dictionary."""
@@ -153,6 +157,14 @@ def add_pronunciation_rule(req: PronunciationRuleRequest):
     """Adds or updates a pronunciation rule in the dictionary."""
     updated = voice_engine.add_pronunciation_rule(req.word, req.replacement, preset=req.preset)
     return {"status": "success", "data": updated}
+
+@app.post("/api/pronunciation/bulk")
+def add_pronunciation_rules_bulk(req: PronunciationBulkRequest):
+    """Adds or updates multiple pronunciation rules in bulk."""
+    if not req.rules:
+        raise HTTPException(status_code=400, detail="No rules provided.")
+    updated = voice_engine.add_pronunciation_rules_bulk(req.rules, preset=req.preset)
+    return {"status": "success", "added_count": len(req.rules), "data": updated}
 
 @app.delete("/api/pronunciation")
 def delete_pronunciation_rule(req: PronunciationDeleteRequest):
