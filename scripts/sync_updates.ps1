@@ -125,13 +125,15 @@ try {
         & "$RootDir\venv\Scripts\pip.exe" install -r "$RootDir\requirements.txt" --quiet
     }
 
-    # Update version.json
+    # Update version.json (BOM-less UTF-8 for cross-platform Python safety)
     $newVersionInfo = @{
         commit_sha = $remoteSha
         version    = "1.0.0"
         updated_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     }
-    $newVersionInfo | ConvertTo-Json -Depth 4 | Set-Content $VersionFile -Encoding UTF8
+    $jsonText = $newVersionInfo | ConvertTo-Json -Depth 4
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($VersionFile, $jsonText, $utf8NoBom)
 
     Write-Host "  [Auto-Sync] Successfully updated to commit $($remoteSha.Substring(0,7))!" -ForegroundColor Green
     Write-Host "======================================================================" -ForegroundColor Cyan

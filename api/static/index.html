@@ -1343,7 +1343,6 @@
               <span class="format-pill">MP4 Video (.mp4)</span>
               <span class="format-pill">H.264 / AAC Clean Demux</span>
               <span class="format-pill highlight">Whisper Auto-Segmented</span>
-              <button type="button" onclick="event.stopPropagation(); loadSampleTestClip();" class="format-pill" style="cursor: pointer; background: rgba(56, 189, 248, 0.18); color: #0284c7; border: 1px solid rgba(56, 189, 248, 0.35); font-weight: 700;">▶ Load Sample Clip (Automation_testing_clip.mp4)</button>
             </div>
             <input type="file" id="videoFileInput" accept=".mp4" style="display: none;" onchange="onVideoSelect(this)">
           </div>
@@ -3930,17 +3929,6 @@
       }
     }
 
-    function loadSampleTestClip() {
-      selectedVideoFile = { name: "Automation_testing_clip.mp4" };
-      document.getElementById('videoFileName').innerText = `Selected: Automation_testing_clip.mp4 (Sample Clip)`;
-      const reBtn = document.getElementById('btnReanalyze');
-      if (reBtn) reBtn.style.display = 'inline-flex';
-      const btnRemoveTop = document.getElementById('btnRemoveVideoTop');
-      if (btnRemoveTop) btnRemoveTop.style.display = 'inline-flex';
-      const removeWrap = document.getElementById('videoRemoveInlineWrap');
-      if (removeWrap) removeWrap.style.display = 'block';
-      analyzeVideoTimeline();
-    }
 
     function onVideoSelect(input) {
       if (input.files.length) {

@@ -5,32 +5,31 @@ color 0a
 
 cd /d "%~dp0"
 
-:: 1. Detect Python interpreter (prefer local venv, fallback to system python)
+:: 1. Detect Python interpreter (prefer local venv, auto-run setup.bat if first time)
 set "PY_EXEC="
 if exist "%~dp0venv\Scripts\python.exe" (
     set "PY_EXEC=%~dp0venv\Scripts\python.exe"
 ) else (
-    where python >nul 2>&1
-    if !errorlevel! equ 0 (
-        set "PY_EXEC=python"
+    echo.
+    echo ========================================================================
+    echo  [FIRST-TIME SETUP DETECTED]
+    echo  Isolated Virtual Environment not found.
+    echo  Launching one-time setup wizard to configure dependencies...
+    echo ========================================================================
+    echo.
+    call "%~dp0setup.bat"
+    if exist "%~dp0venv\Scripts\python.exe" (
+        set "PY_EXEC=%~dp0venv\Scripts\python.exe"
     ) else (
-        where py >nul 2>&1
-        if !errorlevel! equ 0 (
-            set "PY_EXEC=py"
-        )
+        echo.
+        echo ========================================================================
+        echo  [ERROR] Setup was not completed successfully.
+        echo  Please run setup.bat manually to resolve errors.
+        echo ========================================================================
+        echo.
+        pause
+        exit /b 1
     )
-)
-
-if not defined PY_EXEC (
-    echo.
-    echo ========================================================================
-    echo  [ERROR] Python or Virtual Environment not found!
-    echo ========================================================================
-    echo  Please run setup.bat first to configure your environment.
-    echo ========================================================================
-    echo.
-    pause
-    exit /b 1
 )
 
 :: 2. Add local portable bin directory to PATH if present

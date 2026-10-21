@@ -12,7 +12,10 @@ Creates a clean, turnkey, production distribution ZIP file for teammates:
 
 import os
 import sys
+import time
+import json
 import zipfile
+import subprocess
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -78,6 +81,19 @@ def create_team_package():
     print(f"Target Release: {OUTPUT_ZIP.name}")
     print(f"Source Root:    {ROOT_DIR}")
     print("-" * 70)
+
+    # 0. Sync version.json with current git commit SHA
+    try:
+        res = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True)
+        if res.returncode == 0 and res.stdout.strip():
+            cur_sha = res.stdout.strip()
+            v_path = ROOT_DIR / "version.json"
+            v_data = {"commit_sha": cur_sha, "version": "1.0.0", "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+            with open(v_path, "w", encoding="utf-8") as fp:
+                json.dump(v_data, fp, indent=4)
+            print(f"  * Synced version.json to active Git commit: {cur_sha[:7]}")
+    except Exception as e:
+        print(f"  * Warning syncing version.json: {e}")
 
     # 1. Verification of critical assets
     missing = []

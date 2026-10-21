@@ -83,15 +83,24 @@ if !errorlevel! equ 0 (
 )
 
 if "!FFMPEG_FOUND!"=="0" (
-    echo   - [WARNING] FFmpeg is not found!
+    echo   - [WARNING] FFmpeg is not found in PATH or .\bin!
     echo.
     where winget >nul 2>&1
     if !errorlevel! equ 0 (
         echo   Installing FFmpeg automatically via winget...
         winget install Gyan.FFmpeg --accept-package-agreements --accept-source-agreements
-        if !errorlevel! equ 0 (
-            echo   - [OK] FFmpeg installed successfully via winget.
-            set "FFMPEG_FOUND=1"
+        
+        :: Check typical WinGet package install location to link directly into .\bin
+        for /d %%d in ("%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg*") do (
+            for /r "%%d" %%f in (ffmpeg.exe) do (
+                if exist "%%f" (
+                    if not exist "%~dp0bin" mkdir "%~dp0bin"
+                    copy "%%f" "%~dp0bin\ffmpeg.exe" >nul 2>&1
+                    copy "%%~dpfffprobe.exe" "%~dp0bin\ffprobe.exe" >nul 2>&1
+                    set "FFMPEG_FOUND=1"
+                    echo   - [OK] Linked FFmpeg into .\bin\ffmpeg.exe
+                )
+            )
         )
     )
     
@@ -132,11 +141,11 @@ if not exist "venv\Scripts\activate.bat" (
 :: ---------------------------------------------------------
 echo.
 echo [4/5] Installing project dependencies into venv...
-call venv\Scripts\activate.bat
+call "%~dp0venv\Scripts\activate.bat" >nul 2>&1
 
-python -m pip install --upgrade pip --quiet
+"%~dp0venv\Scripts\python.exe" -m pip install --upgrade pip --quiet
 echo   - Installing packages from requirements.txt (FastAPI, Uvicorn, faster-whisper, etc.)...
-pip install -r requirements.txt
+"%~dp0venv\Scripts\python.exe" -m pip install -r "%~dp0requirements.txt"
 if !errorlevel! neq 0 (
     echo [ERROR] Dependency installation encountered errors.
     pause

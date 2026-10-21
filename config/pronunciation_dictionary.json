@@ -5,7 +5,6 @@
     "tatacomp": "Tata Comp",
     "eLearning": "e-learning",
     "VO": "voice-over",
-    "UI": "U-I",
     "PPT": "PowerPoint",
     "PPTX": "PowerPoint",
     "ISO": "I-S-O",
@@ -25,7 +24,19 @@
       "analytica": "Ana-lit-ica",
       "Tata Motors": "Tata Motors",
       "eLearning": "e-learning",
-      "eicher": "EYE-sher"
+      "eicher": "EYE-sher",
+      "Eicher": "EYE-sher",
+      "Automotive": "aw-tuh-MOH-tiv",
+      "World Class Manufacturing": "wurld klass man-yuh-FAK-chuh-ring",
+      "Assembly": "uh-SEM-blee",
+      "Technology": "tek-NOL-uh-jee",
+      "Hurdles": "HUR-dulz",
+      "Culture": "KUL-chur",
+      "Consistently": "kun-SIS-tunt-lee",
+      "ui": "ui",
+      "vps": "vps",
+      "priya": "priya",
+      "volvo": "volvo"
     },
     "eicher": {
       "Advisor": "Ad-visor",

@@ -33,3 +33,5 @@ _archive_legacy_packages/
 .agents/
 .claude/
 *.log
+$RECYCLE.BIN/
+.pnpm-store/

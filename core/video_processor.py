@@ -38,32 +38,42 @@ class VideoProcessor:
             return self._whisper_model
 
         from faster_whisper import WhisperModel
-        device = "cpu"
-        compute_type = "int8"
+        import numpy as np
+
+        model = None
+        has_cuda = False
         try:
             import ctranslate2
             if ctranslate2.get_cuda_device_count() > 0:
-                device = "cuda"
-                compute_type = "float16"
-                print(f"[VideoProcessor] GPU Acceleration Active via CTranslate2 CUDA ({ctranslate2.get_cuda_device_count()} GPU found)")
+                has_cuda = True
             else:
                 import torch
                 if torch.cuda.is_available():
-                    device = "cuda"
-                    compute_type = "float16"
-                    print(f"[VideoProcessor] GPU Acceleration Active: {torch.cuda.get_device_name(0)}")
+                    has_cuda = True
         except Exception:
             pass
 
-        try:
-            self._whisper_model = WhisperModel("tiny", device=device, compute_type=compute_type)
-        except Exception as e:
-            if device != "cpu":
-                print(f"[VideoProcessor] CUDA init failed ({e}), falling back to CPU int8")
-                self._whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
-            else:
-                raise e
+        if has_cuda:
+            try:
+                candidate = WhisperModel("tiny", device="cuda", compute_type="float16")
+                # Smoke-test inference on 0.1s silence to verify cublas/cudnn DLLs actually link
+                dummy_audio = np.zeros(1600, dtype=np.float32)
+                list(candidate.transcribe(dummy_audio, beam_size=1)[0])
+                model = candidate
+                print("[VideoProcessor] GPU Acceleration Active via CUDA (float16)")
+            except Exception as e:
+                print(f"[VideoProcessor] CUDA runtime unavailable or missing DLL ({e}). Falling back to CPU int8 mode.")
+                model = None
 
+        if model is None:
+            try:
+                model = WhisperModel("tiny", device="cpu", compute_type="int8")
+                print("[VideoProcessor] Whisper initialized in CPU int8 mode (Fast & Universal).")
+            except Exception as e:
+                print(f"[VideoProcessor] CPU int8 init failed ({e}), trying standard CPU.")
+                model = WhisperModel("tiny", device="cpu", compute_type="default")
+
+        self._whisper_model = model
         return self._whisper_model
 
 
