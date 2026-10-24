@@ -110,10 +110,14 @@ if "!FFMPEG_FOUND!"=="0" (
         echo   https://www.gyan.dev/ffmpeg/builds/
         echo   and place ffmpeg.exe inside a 'bin' folder in this directory.
         echo.
-        set /p CONT="Continue setup without FFmpeg for now? (Audio TTS will work, Video Voice Change requires FFmpeg) (Y/N): "
-        if /i not "!CONT!"=="Y" (
-            pause
-            exit /b 1
+        if "%~1"=="--non-interactive" (
+            echo   [NOTICE] Continuing setup in non-interactive mode without FFmpeg.
+        ) else (
+            set /p CONT="Continue setup without FFmpeg for now? (Audio TTS will work, Video Voice Change requires FFmpeg) (Y/N): "
+            if /i not "!CONT!"=="Y" (
+                pause
+                exit /b 1
+            )
         )
     )
 )
@@ -197,4 +201,4 @@ echo  To stop the engine at any time:
 echo     Double-click: stop.bat
 echo ========================================================================
 echo.
-pause
+if "%~1" neq "--non-interactive" pause

@@ -14,6 +14,11 @@ if (-not (Test-Path "$RootDir\run_server.py")) {
 $ConfigFile = "$RootDir\config\updater_config.json"
 $VersionFile = "$RootDir\version.json"
 
+# Skip auto-sync if running inside developer Git repository (preserves local development work)
+if (Test-Path "$RootDir\.git") {
+    exit 0
+}
+
 if (-not (Test-Path $ConfigFile)) {
     exit 0
 }
