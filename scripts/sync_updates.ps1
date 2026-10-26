@@ -133,7 +133,7 @@ try {
     # Update version.json (BOM-less UTF-8 for cross-platform Python safety)
     $newVersionInfo = @{
         commit_sha = $remoteSha
-        version    = "1.0.0"
+        version    = "2.0.0"
         updated_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     }
     $jsonText = $newVersionInfo | ConvertTo-Json -Depth 4

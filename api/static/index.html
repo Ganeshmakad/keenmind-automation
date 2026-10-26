@@ -1384,21 +1384,29 @@
         <!-- 2. Dual Processing Mode Selection -->
         <div style="margin-bottom: 1.5rem;">
           <label style="font-size: 0.95rem; font-weight: 700; display: block; margin-bottom: 0.65rem; color: var(--card-heading);">2. Choose Replacement Mode:</label>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
-            <div class="mode-card active" id="modeCardTTS" onclick="setVideoMode('strict_tts')">
-              <input type="radio" name="videoMode" value="strict_tts" checked style="accent-color: var(--primary); width: 18px; height: 18px; margin-top: 0.25rem; cursor: pointer;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div class="mode-card active" id="modeCardSTS" onclick="setVideoMode('voice_changer')">
+              <input type="radio" name="videoMode" value="voice_changer" checked style="accent-color: var(--primary); width: 18px; height: 18px; margin-top: 0.25rem; cursor: pointer;">
               <div>
-                <div style="font-weight: 700; font-size: 1rem; color: var(--card-heading);">Strict PPT Script Mode (Text-to-Speech)</div>
-                <div style="font-size: 0.82rem; color: var(--accent); margin: 0.25rem 0; font-weight: 700;">★ Recommended (100% Quality &amp; Spelling)</div>
-                <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.45;">Synthesizes speech strictly from PPT storyboard text. Automatically fixes mispronunciations or slips of the tongue made by the actor in the video.</div>
+                <div style="font-weight: 700; font-size: 0.98rem; color: var(--card-heading);">⚡ Standard Voice Changer</div>
+                <div style="font-size: 0.8rem; color: #0284c7; margin: 0.25rem 0; font-weight: 700;">100% Video Sync &amp; Natural</div>
+                <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.4;">The original, unmodified engine. Slices exact audio and morphs vocal cords without audio filtering. 100% lip-sync accuracy, zero lost words.</div>
               </div>
             </div>
-            <div class="mode-card" id="modeCardSTS" onclick="setVideoMode('voice_changer')">
-              <input type="radio" name="videoMode" value="voice_changer" style="accent-color: var(--primary); width: 18px; height: 18px; margin-top: 0.25rem; cursor: pointer;">
+            <div class="mode-card" id="modeCardDeWobble" onclick="setVideoMode('de_wobble')">
+              <input type="radio" name="videoMode" value="de_wobble" style="accent-color: var(--primary); width: 18px; height: 18px; margin-top: 0.25rem; cursor: pointer;">
               <div>
-                <div style="font-weight: 700; font-size: 1rem; color: var(--card-heading);">Voice Changer Mode (Speech-to-Speech)</div>
-                <div style="font-size: 0.82rem; color: #0284c7; margin: 0.25rem 0; font-weight: 700;">Preserves Original Human Pacing &amp; Lip-Sync</div>
-                <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.45;">Takes the video's original spoken audio wave and morphs vocal cords into your chosen character while preserving exact pauses and laughs.</div>
+                <div style="font-weight: 700; font-size: 0.98rem; color: var(--card-heading);">✨ De-Wobbled Voice Changer</div>
+                <div style="font-size: 0.8rem; color: #8b5cf6; margin: 0.25rem 0; font-weight: 700;">Anti-Tremor / Cleaner (Experimental)</div>
+                <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.4;">Applies 80Hz rumble filtering, spectral noise suppression, and high stability (0.85) to eliminate pitch tremor without background hiss or choppiness.</div>
+              </div>
+            </div>
+            <div class="mode-card" id="modeCardTTS" onclick="setVideoMode('strict_tts')">
+              <input type="radio" name="videoMode" value="strict_tts" style="accent-color: var(--primary); width: 18px; height: 18px; margin-top: 0.25rem; cursor: pointer;">
+              <div>
+                <div style="font-weight: 700; font-size: 0.98rem; color: var(--card-heading);">🎙️ Strict PPT Script Mode</div>
+                <div style="font-size: 0.8rem; color: var(--accent); margin: 0.25rem 0; font-weight: 700;">Pure Studio TTS (Text-to-Speech)</div>
+                <div style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.4;">Synthesizes fresh audio strictly from PPT storyboard text with frame-locked mouth closure sync and collision barriers.</div>
               </div>
             </div>
           </div>
@@ -3874,19 +3882,20 @@
       }
     }
 
-    let activeVideoMode = 'strict_tts';
+    let activeVideoMode = 'voice_changer';
     let currentTimelineSegments = [];
 
     function setVideoMode(mode) {
       activeVideoMode = mode;
-      const c1 = document.getElementById('modeCardTTS');
-      const c2 = document.getElementById('modeCardSTS');
-      if (c1) c1.classList.toggle('active', mode === 'strict_tts');
-      if (c2) c2.classList.toggle('active', mode === 'voice_changer');
-      const r1 = document.querySelector('input[name="videoMode"][value="strict_tts"]');
-      const r2 = document.querySelector('input[name="videoMode"][value="voice_changer"]');
-      if (r1) r1.checked = (mode === 'strict_tts');
-      if (r2) r2.checked = (mode === 'voice_changer');
+      const cSTS = document.getElementById('modeCardSTS');
+      const cDW = document.getElementById('modeCardDeWobble');
+      const cTTS = document.getElementById('modeCardTTS');
+      if (cSTS) cSTS.classList.toggle('active', mode === 'voice_changer');
+      if (cDW) cDW.classList.toggle('active', mode === 'de_wobble');
+      if (cTTS) cTTS.classList.toggle('active', mode === 'strict_tts');
+
+      const r = document.querySelector(`input[name="videoMode"][value="${mode}"]`);
+      if (r) r.checked = true;
     }
 
     function formatTime(seconds) {
@@ -4505,6 +4514,14 @@
             <select class="select-input" style="padding: 0.5rem 0.75rem; font-size: 0.92rem; width: 100%; font-weight: 600; ${!isSpeakerAssigned ? 'border-color: rgba(239, 68, 68, 0.45);' : ''}" onchange="updateSegmentSpeaker(${idx}, this.value)">
               ${charOptions}
             </select>
+            <div style="margin-top: 5px;">
+              <select class="select-input" style="padding: 0.32rem 0.5rem; font-size: 0.76rem; width: 100%; font-weight: 500; border-radius: 6px; background: rgba(0,0,0,0.02);" onchange="updateSegmentMode(${idx}, this.value)" title="Choose generation mode for this specific line">
+                <option value="" ${!seg.mode ? 'selected' : ''}>Auto (Follows Video Mode)</option>
+                <option value="voice_changer" ${seg.mode === 'voice_changer' ? 'selected' : ''}>⚡ Standard Voice Changer (100% Video Sync)</option>
+                <option value="de_wobble" ${seg.mode === 'de_wobble' ? 'selected' : ''}>✨ De-Wobbled Voice Changer (Anti-Tremor)</option>
+                <option value="strict_tts" ${seg.mode === 'strict_tts' ? 'selected' : ''}>🎙️ Clean Script (Frame-Locked TTS)</option>
+              </select>
+            </div>
             ${matchBadge}
             ${speakerBadge}
           </td>
@@ -4825,6 +4842,13 @@
     function updateSegmentScript(idx, newScript) {
       if (currentTimelineSegments[idx]) {
         currentTimelineSegments[idx].script_text = newScript;
+        scheduleAutoSaveDraft();
+      }
+    }
+
+    function updateSegmentMode(idx, newMode) {
+      if (currentTimelineSegments[idx]) {
+        currentTimelineSegments[idx].mode = newMode || undefined;
         scheduleAutoSaveDraft();
       }
     }

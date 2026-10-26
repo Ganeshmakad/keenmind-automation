@@ -489,7 +489,13 @@ class VideoProcessor:
                 audio_target = str(temp_audio)
 
             whisper = self.get_whisper_model()
-            segs, info = whisper.transcribe(audio_target, beam_size=1, word_timestamps=True)
+            segs, info = whisper.transcribe(
+                audio_target,
+                beam_size=1,
+                word_timestamps=True,
+                vad_filter=True,
+                vad_parameters=dict(min_silence_duration_ms=250)
+            )
             for s in segs:
                 txt = s.text.strip()
                 if txt:
@@ -500,7 +506,10 @@ class VideoProcessor:
                     else:
                         w_start = round(s.start, 2)
                         w_end = round(s.end, 2)
-                    if w_end - w_start >= 0.3:
+                    clean_txt = re.sub(r'\[.*?\]|\(.*?\)', '', txt).strip()
+                    is_valid_dur = (w_end - w_start) >= 0.12
+                    has_real_words = bool(re.search(r'[a-zA-Z0-9]', clean_txt))
+                    if is_valid_dur and has_real_words:
                         raw_segments.append({
                             "start": w_start,
                             "end": w_end,
@@ -511,7 +520,13 @@ class VideoProcessor:
             try:
                 self.extract_audio(str(video_path), str(temp_audio), duration_seconds=effective_duration)
                 whisper = self.get_whisper_model()
-                segs, info = whisper.transcribe(str(temp_audio), beam_size=1, word_timestamps=True)
+                segs, info = whisper.transcribe(
+                    str(temp_audio),
+                    beam_size=1,
+                    word_timestamps=True,
+                    vad_filter=True,
+                    vad_parameters=dict(min_silence_duration_ms=250)
+                )
                 for s in segs:
                     txt = s.text.strip()
                     if txt:
@@ -521,7 +536,10 @@ class VideoProcessor:
                         else:
                             w_start = round(s.start, 2)
                             w_end = round(s.end, 2)
-                        if w_end - w_start >= 0.3:
+                        clean_txt = re.sub(r'\[.*?\]|\(.*?\)', '', txt).strip()
+                        is_valid_dur = (w_end - w_start) >= 0.12
+                        has_real_words = bool(re.search(r'[a-zA-Z0-9]', clean_txt))
+                        if is_valid_dur and has_real_words:
                             raw_segments.append({
                                 "start": w_start,
                                 "end": w_end,
@@ -742,7 +760,8 @@ class VideoProcessor:
                 speakers = [raw_speaker]
 
             effective_start = start
-            if mode == "strict_tts":
+            seg_mode = (seg.get("mode") or mode).lower()
+            if seg_mode == "strict_tts":
                 if len(speakers) > 1:
                     part_files = []
                     for spk_idx, spk in enumerate(speakers):
@@ -789,21 +808,28 @@ class VideoProcessor:
                 except Exception as trim_err:
                     print(f"[VideoProcessor] Silence trim warning: {trim_err}")
 
-                # 2. Detect true vocal onset to eliminate initial speech lag
+                # 2. Align speech start with pre-roll acoustic onset to eliminate speech lag and initial repetition
+                prev_end = segments[idx - 1]["end"] if idx > 0 else 0.0
+                safe_pre_roll = max(prev_end + 0.03, start - 0.20)
                 onset = seg.get("vocal_start")
-                if onset is None and master_audio.exists():
-                    onset = self.detect_vocal_onset(str(master_audio), start=start, end=end)
-                if onset is not None and onset > start:
+                if onset is not None and onset < start and onset >= safe_pre_roll:
                     effective_start = onset
+                else:
+                    effective_start = max(safe_pre_roll, start - 0.12)
 
                 # 3. Bi-directional cadence fitting using FFmpeg atempo
-                effective_slot = max(end - effective_start, 0.2)
-                if effective_slot > 0.4:
+                # Calculate hard deadline using the next segment's start time to strictly prevent overlapping
+                next_seg_start = segments[idx + 1]["start"] if idx + 1 < len(segments) else None
+                hard_deadline = min(end, next_seg_start - 0.04) if next_seg_start else end
+                effective_slot = max(hard_deadline - effective_start, 0.25)
+
+                if effective_slot > 0.35:
                     actual_dur = self.get_media_duration(str(seg_out))
                     # Speed up if speech overflows the actor's window
-                    if actual_dur > (effective_slot + 0.15):
+                    if actual_dur > (effective_slot + 0.08):
                         speed_ratio = actual_dur / effective_slot
-                        safe_speed = min(speed_ratio, 1.35)
+                        # Scale up to 1.55x smoothly with atempo so actor mouth closure is respected
+                        safe_speed = min(speed_ratio, 1.55)
                         fitted_out = self.temp_dir / f"fit_{seg_out.name}"
                         try:
                             fit_cmd = [
@@ -861,20 +887,37 @@ class VideoProcessor:
                 ]
                 subprocess.run(slice_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
 
+                is_dewobble_mode = seg_mode in ("de_wobble", "dewobble", "voice_changer_dewobble", "dewobbled")
+
+                if is_dewobble_mode:
+                    # Optional Mode: De-Wobbled Voice Changer with Clean Acoustic Pre-filtering (80Hz rumble cut + FFT spectral denoising)
+                    # Never uses aggressive dynaudnorm or compressors which pump background hiss and clip word onsets
+                    clean_chunk = self.temp_dir / f"chunk_{v_path.stem}_{idx}_clean.wav"
+                    clean_cmd = [
+                        "ffmpeg", "-y",
+                        "-i", str(raw_chunk),
+                        "-af", "highpass=f=80,afftdn=nf=-32",
+                        str(clean_chunk)
+                    ]
+                    res_clean = subprocess.run(clean_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    input_for_sts = str(clean_chunk) if (res_clean.returncode == 0 and clean_chunk.exists() and clean_chunk.stat().st_size > 0) else str(raw_chunk)
+                else:
+                    # Standard Voice Changer: 100% Original Unmodified Audio Slice
+                    input_for_sts = str(raw_chunk)
+
                 if len(speakers) > 1:
                     # Option B: Dual-Morph Parallel Blend (Voice Changer STS)
-                    # Slices original chunk once, runs parallel STS for each character,
-                    # and composites them with frame-accurate sync and balanced volume!
                     part_files = []
                     for spk_idx, spk in enumerate(speakers):
                         clean_spk = re.sub(r'[^a-zA-Z0-9_\-]', '', spk) or f"Speaker{spk_idx}"
                         spk_out = self.temp_dir / f"seg_{v_path.stem}_{idx}_{clean_spk}_sts_part.mp3"
                         voice_engine.convert_speech_to_speech(
-                            input_audio_path=str(raw_chunk),
+                            input_audio_path=input_for_sts,
                             target_character=spk,
                             output_path=str(spk_out),
                             preset=preset,
                             settings_override=settings_override,
+                            de_wobble=is_dewobble_mode,
                             dry_run=False,
                             overwrite=overwrite
                         )
@@ -883,11 +926,12 @@ class VideoProcessor:
                     self.blend_audio_clips(part_files, str(seg_out), volume=0.82)
                 else:
                     res = voice_engine.convert_speech_to_speech(
-                        input_audio_path=str(raw_chunk),
+                        input_audio_path=input_for_sts,
                         target_character=raw_speaker,
                         output_path=str(seg_out),
                         preset=preset,
                         settings_override=settings_override,
+                        de_wobble=is_dewobble_mode,
                         dry_run=False,
                         overwrite=overwrite
                     )
@@ -919,9 +963,20 @@ class VideoProcessor:
         fade_out = np.linspace(1.0, 0.0, fade_len)[:, np.newaxis]
         fade_in = np.linspace(0.0, 1.0, fade_len)[:, np.newaxis]
 
-        for s in segments:
-            m_start = s["start"]
-            m_end = max(s["end"], s.get("vocal_end", s["end"]))
+        for seg_i, s in enumerate(segments):
+            prev_end = segments[seg_i - 1]["end"] if seg_i > 0 else 0.0
+            next_start = segments[seg_i + 1]["start"] if seg_i + 1 < len(segments) else None
+            seg_m = (s.get("mode") or mode).lower()
+
+            # For strict TTS, apply acoustic pre-roll & post-roll to completely erase original vocal onsets and tail bleed
+            if seg_m == "strict_tts":
+                m_start = max(prev_end + 0.03, s["start"] - 0.20)
+                raw_end = max(s["end"], s.get("vocal_end", s["end"]))
+                m_end = min(next_start - 0.03, raw_end + 0.15) if next_start else (raw_end + 0.15)
+            else:
+                m_start = s["start"]
+                m_end = max(s["end"], s.get("vocal_end", s["end"]))
+
             s_idx = max(0, min(int(m_start * framerate), len(master_samples)))
             e_idx = max(0, min(int(m_end * framerate), len(master_samples)))
             if s_idx < e_idx:
@@ -939,7 +994,7 @@ class VideoProcessor:
                     master_samples[mid_end:e_idx] = (master_samples[mid_end:e_idx] * fade_in[:actual_fade]).astype(np.int16)
 
         # 3c. Overlay each synthesized dialogue segment at its exact effective_start timestamp
-        for seg, audio_f, eff_start in seg_audio_files:
+        for seg_idx, (seg, audio_f, eff_start) in enumerate(seg_audio_files):
             if not Path(audio_f).exists():
                 continue
             # Decode segment audio to matching PCM sample rate & channels
@@ -956,11 +1011,26 @@ class VideoProcessor:
             if res_dec.returncode != 0 or not res_dec.stdout:
                 continue
 
-            seg_data = np.frombuffer(res_dec.stdout, dtype=np.int16).reshape(-1, n_channels)
+            seg_data = np.frombuffer(res_dec.stdout, dtype=np.int16).copy().reshape(-1, n_channels)
             ins_start = max(0, int(eff_start * framerate))
 
             if ins_start < len(master_samples):
                 usable_len = min(len(seg_data), len(master_samples) - ins_start)
+
+                # HARD COLLISION BARRIER: Ensure this segment never bleeds into the next segment
+                if seg_idx + 1 < len(seg_audio_files):
+                    next_start_time = seg_audio_files[seg_idx + 1][2]
+                    max_allowed_len = max(0, int((next_start_time - 0.04) * framerate) - ins_start)
+                    if usable_len > max_allowed_len:
+                        usable_len = max_allowed_len
+                        # Apply gentle 10ms fade-out at cutoff point
+                        cutoff_fade = min(int(0.010 * framerate), usable_len)
+                        if cutoff_fade > 0:
+                            fade_curve = np.linspace(1.0, 0.0, cutoff_fade)[:, np.newaxis]
+                            seg_data[usable_len-cutoff_fade:usable_len] = (
+                                seg_data[usable_len-cutoff_fade:usable_len] * fade_curve
+                            ).astype(np.int16)
+
                 mixed = (master_samples[ins_start:ins_start+usable_len].astype(np.int32) +
                          seg_data[:usable_len].astype(np.int32))
                 master_samples[ins_start:ins_start+usable_len] = np.clip(mixed, -32768, 32767).astype(np.int16)

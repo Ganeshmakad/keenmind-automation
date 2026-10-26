@@ -643,12 +643,16 @@ class VoiceEngine:
         voice_id_override: Optional[str] = None,
         voice_name_override: Optional[str] = None,
         settings_override: Optional[Dict[str, Any]] = None,
+        de_wobble: bool = False,
         dry_run: bool = False,
         overwrite: bool = False
     ) -> Dict[str, Any]:
         """
         ElevenLabs Speech-to-Speech (Voice Changer).
         Converts speech in input_audio_path into target_character's voice.
+        When de_wobble=True, applies anti-tremor stability and similarity parameters
+        to suppress human vocal tremors and pitch wobbles.
+        When de_wobble=False (Standard Voice Changer), leaves voice settings 100% original.
         """
         dest_file = Path(output_path)
         dest_file.parent.mkdir(parents=True, exist_ok=True)
@@ -657,11 +661,20 @@ class VoiceEngine:
         voice_id = voice_id_override or char_cfg["voice_id"]
         voice_name = voice_name_override or char_cfg.get("voice_name", target_character)
         base_settings = char_cfg.get("settings", {})
-        settings = {**base_settings, **settings_override} if settings_override else base_settings
+        
+        # Apply anti-tremor de-wobble defaults if not explicitly overridden by user
+        effective_settings = dict(base_settings)
+        if de_wobble:
+            effective_settings.setdefault("stability", 0.85)
+            effective_settings["stability"] = max(effective_settings.get("stability", 0.50), 0.85)
+            effective_settings["similarity_boost"] = min(effective_settings.get("similarity_boost", 0.75), 0.50)
+            effective_settings["style"] = min(effective_settings.get("style", 0.20), 0.0)
+        
+        settings = {**effective_settings, **settings_override} if settings_override else effective_settings
         model_id = self.config.get("default_sts_model", "eleven_multilingual_sts_v2")
 
         in_hash = self._compute_file_hash(input_audio_path)
-        cache_key = hashlib.md5(f"{voice_id}|{in_hash}|{model_id}|{json.dumps(settings, sort_keys=True)}".encode("utf-8")).hexdigest()
+        cache_key = hashlib.md5(f"{voice_id}|{in_hash}|{model_id}|{json.dumps(settings, sort_keys=True)}|dewobble={de_wobble}".encode("utf-8")).hexdigest()
         cached_file = self.cache_dir / f"sts_{cache_key}.mp3"
 
         if dest_file.exists() and not overwrite:

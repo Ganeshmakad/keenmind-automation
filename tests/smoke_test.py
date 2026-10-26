@@ -372,6 +372,45 @@ class TestKeenmindAutomationStudio(unittest.TestCase):
         self.assertIn("status", data)
         self.assertIn(data["status"], ["success", "dry_run"])
 
+    def test_21_dewobble_and_per_segment_mode_support(self):
+        # 1. Verify dry_run with mode='de_wobble' and per-segment mode overrides
+        segments = [
+            {"id": 0, "start": 0.0, "end": 4.5, "speaker": "Dex", "script_text": "Normal line", "mode": "voice_changer"},
+            {"id": 1, "start": 5.0, "end": 9.2, "speaker": "Analytica", "script_text": "Anti-tremor line", "mode": "de_wobble"},
+            {"id": 2, "start": 10.0, "end": 12.0, "speaker": "Analytica", "script_text": "Pure studio line", "mode": "strict_tts"}
+        ]
+        res = self.video_processor.replace_video_multi_speaker(
+            video_path="test_video.mp4",
+            segments=segments,
+            mode="voice_changer",
+            voice_engine=self.voice_engine,
+            output_video_path="output/test_dewobble.mp4",
+            preset="tata",
+            model_id="eleven_v4",
+            dry_run=True
+        )
+        self.assertEqual(res.get("status"), "dry_run")
+        self.assertEqual(res.get("total_segments"), 3)
+
+        # 2. Verify micro-word filter logic (duration >= 0.12s + alphanumeric excluding bracketed tags)
+        import re
+        def check_filter(w_start, w_end, txt):
+            clean_txt = re.sub(r'\[.*?\]|\(.*?\)', '', txt).strip()
+            is_valid_dur = (w_end - w_start) >= 0.12
+            has_real_words = bool(re.search(r'[a-zA-Z0-9]', clean_txt))
+            return is_valid_dur and has_real_words
+
+        # Short word "Understood." (0.28s) should pass
+        self.assertTrue(check_filter(19.22, 19.50, "Understood."))
+        # Monosyllable "No" (0.15s) should pass
+        self.assertTrue(check_filter(1.0, 1.15, "No"))
+        # Pure noise or mic click (0.05s) should be rejected
+        self.assertFalse(check_filter(1.0, 1.05, "..."))
+        # Non-alphanumeric punctuation or bracketed audio tags only should be rejected
+        self.assertFalse(check_filter(1.0, 1.50, " [breath] "))
+        self.assertFalse(check_filter(1.0, 1.50, " (applause) "))
+        self.assertTrue(check_filter(1.0, 1.80, " [applause] Thank you "))
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

@@ -58,6 +58,7 @@ SKELETON_DIRS = [
 EXCLUDE_DIRS = {
     "_dev_and_testing",
     "_archive_legacy_packages",
+    "woobly audio video",
     "venv",
     ".venv",
     "env",
@@ -88,7 +89,7 @@ def create_team_package():
         if res.returncode == 0 and res.stdout.strip():
             cur_sha = res.stdout.strip()
             v_path = ROOT_DIR / "version.json"
-            v_data = {"commit_sha": cur_sha, "version": "1.0.0", "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+            v_data = {"commit_sha": cur_sha, "version": "2.0.0", "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
             with open(v_path, "w", encoding="utf-8") as fp:
                 json.dump(v_data, fp, indent=4)
             print(f"  * Synced version.json to active Git commit: {cur_sha[:7]}")
